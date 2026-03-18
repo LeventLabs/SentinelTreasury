@@ -1,0 +1,12 @@
+node_modules/
+.env
+.env.local
+dist/
+out/
+.next/
+cache/
+artifacts/
+typechain-types/
+__pycache__/
+*.pyc
+.DS_Store

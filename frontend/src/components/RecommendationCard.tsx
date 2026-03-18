@@ -1,0 +1,88 @@
+"use client";
+
+import { useState } from "react";
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
+interface Props {
+  treasuryBalance: number;
+  yieldBalance: number;
+  onRecommendation: (rec: any) => void;
+}
+
+export function RecommendationCard({ treasuryBalance, yieldBalance, onRecommendation }: Props) {
+  const [loading, setLoading] = useState(false);
+  const [rec, setRec] = useState<any>(null);
+
+  const fetchRecommendation = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_URL}/recommend`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          treasury_balance: treasuryBalance,
+          yield_balance: yieldBalance,
+          yield_apy: 8.0,
+          pending_payouts: 200,
+        }),
+      });
+      const data = await res.json();
+      setRec(data);
+      onRecommendation(data);
+    } catch {
+      setRec({ action: "error", reasoning: "Failed to reach AI service." });
+    }
+    setLoading(false);
+  };
+
+  return (
+    <div className="bg-gray-900 rounded-xl p-5 border border-gray-800">
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="font-semibold">AI Recommendation</h2>
+        <button
+          onClick={fetchRecommendation}
+          disabled={loading || treasuryBalance === 0}
+          className="bg-purple-600 hover:bg-purple-700 disabled:opacity-50 px-4 py-1.5 rounded-lg text-sm font-medium"
+        >
+          {loading ? "Analyzing..." : "Get Recommendation"}
+        </button>
+      </div>
+
+      {rec && (
+        <div className="space-y-3">
+          {/* Action */}
+          <div className="flex items-center gap-2">
+            <span className={`px-2 py-0.5 rounded text-xs font-bold uppercase ${
+              rec.action === "allocate_to_yield" ? "bg-green-900 text-green-300" :
+              rec.action === "withdraw_from_yield" ? "bg-red-900 text-red-300" :
+              "bg-gray-800 text-gray-400"
+            }`}>
+              {rec.action}
+            </span>
+            {rec.amount_abs > 0 && <span className="text-sm text-gray-300">${rec.amount_abs}</span>}
+          </div>
+
+          {/* Reasoning */}
+          <p className="text-sm text-gray-300 bg-gray-800 rounded-lg p-3">{rec.reasoning}</p>
+
+          {/* Scores */}
+          {rec.scores && (
+            <div className="grid grid-cols-4 gap-2">
+              {Object.entries(rec.scores).map(([key, val]) => (
+                <div key={key} className="text-center">
+                  <div className="text-xs text-gray-500 capitalize">{key.replace("_", " ")}</div>
+                  <div className={`text-lg font-bold ${
+                    (val as number) >= 70 ? "text-green-400" : (val as number) >= 40 ? "text-yellow-400" : "text-red-400"
+                  }`}>
+                    {val as number}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
