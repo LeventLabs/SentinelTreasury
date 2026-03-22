@@ -1,6 +1,15 @@
 "use client";
 
 import { useState } from "react";
+import { waitForTransactionReceipt } from "@wagmi/core";
+import { parseUnits } from "viem";
+import { useConfig, useWriteContract } from "wagmi";
+import {
+  CONTRACTS_CONFIGURED,
+  TREASURY_ABI,
+  TREASURY_ADDRESS,
+  USDC_DECIMALS,
+} from "@/config/contracts";
 
 interface Props {
   recommendation: any;
@@ -8,15 +17,48 @@ interface Props {
 }
 
 export function ApprovalFlow({ recommendation, onExecuted }: Props) {
+  const config = useConfig();
+  const { writeContractAsync } = useWriteContract();
   const [status, setStatus] = useState<"pending" | "approved" | "executing" | "done">("pending");
+  const [error, setError] = useState<string | null>(null);
 
   const handleApprove = async () => {
-    setStatus("approved");
-    setStatus("executing");
-    // TODO: call contract allocateToYield() or withdrawFromYield() via wagmi
-    await new Promise((r) => setTimeout(r, 1500));
-    setStatus("done");
-    setTimeout(onExecuted, 1000);
+    if (!CONTRACTS_CONFIGURED) return;
+
+    try {
+      setError(null);
+      setStatus("approved");
+      setStatus("executing");
+
+      const amountUnits = parseUnits(String(recommendation.amount_abs ?? 0), USDC_DECIMALS);
+
+      let hash: `0x${string}`;
+      if (recommendation.action === "allocate_to_yield") {
+        hash = await writeContractAsync({
+          address: TREASURY_ADDRESS,
+          abi: TREASURY_ABI,
+          functionName: "allocateToYield",
+          args: [amountUnits],
+        });
+      } else if (recommendation.action === "withdraw_from_yield") {
+        hash = await writeContractAsync({
+          address: TREASURY_ADDRESS,
+          abi: TREASURY_ABI,
+          functionName: "withdrawFromYield",
+          args: [amountUnits],
+        });
+      } else {
+        throw new Error(`Unsupported action: ${recommendation.action}`);
+      }
+
+      await waitForTransactionReceipt(config, { hash });
+      setStatus("done");
+      setTimeout(onExecuted, 1000);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Execution failed.";
+      setError(message);
+      setStatus("pending");
+    }
   };
 
   return (
@@ -30,6 +72,7 @@ export function ApprovalFlow({ recommendation, onExecuted }: Props) {
         <div className="flex gap-3">
           <button
             onClick={handleApprove}
+            disabled={!CONTRACTS_CONFIGURED}
             className="bg-green-600 hover:bg-green-700 px-6 py-2 rounded-lg font-medium"
           >
             Approve & Execute
@@ -45,6 +88,12 @@ export function ApprovalFlow({ recommendation, onExecuted }: Props) {
 
       {status === "executing" && <p className="text-yellow-400 text-sm">Executing on-chain...</p>}
       {status === "done" && <p className="text-green-400 text-sm">✓ Transaction confirmed</p>}
+      {!CONTRACTS_CONFIGURED && (
+        <p className="text-xs text-yellow-400 mt-3">
+          Set treasury, yield vault, and USDC addresses in frontend env before execution.
+        </p>
+      )}
+      {error && <p className="text-xs text-red-400 mt-3 break-words">{error}</p>}
     </div>
   );
 }

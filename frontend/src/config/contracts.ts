@@ -1,6 +1,11 @@
-export const TREASURY_ADDRESS = process.env.NEXT_PUBLIC_TREASURY_ADDRESS as `0x${string}` || "0x";
-export const YIELD_VAULT_ADDRESS = process.env.NEXT_PUBLIC_YIELD_VAULT_ADDRESS as `0x${string}` || "0x";
-export const USDC_ADDRESS = process.env.NEXT_PUBLIC_USDC_ADDRESS as `0x${string}` || "0x";
+const envAddress = (value: string | undefined) => (value && value.startsWith("0x") ? value : "0x");
+
+export const TREASURY_ADDRESS = envAddress(process.env.NEXT_PUBLIC_TREASURY_ADDRESS) as `0x${string}`;
+export const YIELD_VAULT_ADDRESS = envAddress(process.env.NEXT_PUBLIC_YIELD_VAULT_ADDRESS) as `0x${string}`;
+export const USDC_ADDRESS = envAddress(process.env.NEXT_PUBLIC_USDC_ADDRESS) as `0x${string}`;
+export const USDC_DECIMALS = Number(process.env.NEXT_PUBLIC_USDC_DECIMALS || "6");
+export const CONTRACTS_CONFIGURED =
+  TREASURY_ADDRESS !== "0x" && YIELD_VAULT_ADDRESS !== "0x" && USDC_ADDRESS !== "0x";
 
 export const TREASURY_ABI = [
   { type: "function", name: "deposit", inputs: [{ name: "amount", type: "uint256" }], outputs: [], stateMutability: "nonpayable" },

@@ -1,25 +1,66 @@
 "use client";
 
 import { useState } from "react";
+import { waitForTransactionReceipt } from "@wagmi/core";
+import { parseUnits } from "viem";
+import { useAccount, useConfig, useWriteContract } from "wagmi";
+import {
+  CONTRACTS_CONFIGURED,
+  ERC20_ABI,
+  TREASURY_ABI,
+  TREASURY_ADDRESS,
+  USDC_ADDRESS,
+  USDC_DECIMALS,
+} from "@/config/contracts";
 
 interface Props {
-  onDeposit: (amount: number) => void;
+  onDeposit: () => void;
 }
 
 export function DepositForm({ onDeposit }: Props) {
+  const { isConnected } = useAccount();
+  const config = useConfig();
+  const { writeContractAsync } = useWriteContract();
   const [amount, setAmount] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [phase, setPhase] = useState<"idle" | "approving" | "depositing">("idle");
+  const [error, setError] = useState<string | null>(null);
+
+  const loading = phase !== "idle";
 
   const handleDeposit = async () => {
     const val = parseFloat(amount);
-    if (!val || val <= 0) return;
-    setLoading(true);
-    // TODO: call treasury contract deposit() via wagmi useWriteContract
-    // For now, simulate:
-    await new Promise((r) => setTimeout(r, 1000));
-    onDeposit(val);
-    setAmount("");
-    setLoading(false);
+    if (!val || val <= 0 || !isConnected || !CONTRACTS_CONFIGURED) return;
+
+    try {
+      setError(null);
+      const amountUnits = parseUnits(amount, USDC_DECIMALS);
+
+      setPhase("approving");
+      const approveHash = await writeContractAsync({
+        address: USDC_ADDRESS,
+        abi: ERC20_ABI,
+        functionName: "approve",
+        args: [TREASURY_ADDRESS, amountUnits],
+      });
+      await waitForTransactionReceipt(config, { hash: approveHash });
+
+      setPhase("depositing");
+      const depositHash = await writeContractAsync({
+        address: TREASURY_ADDRESS,
+        abi: TREASURY_ABI,
+        functionName: "deposit",
+        args: [amountUnits],
+      });
+      await waitForTransactionReceipt(config, { hash: depositHash });
+
+      setAmount("");
+      onDeposit();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Deposit failed.";
+      setError(message);
+    } finally {
+      setPhase("idle");
+    }
   };
 
   return (
@@ -35,12 +76,20 @@ export function DepositForm({ onDeposit }: Props) {
         />
         <button
           onClick={handleDeposit}
-          disabled={loading}
+          disabled={loading || !isConnected || !CONTRACTS_CONFIGURED}
           className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 px-6 py-2 rounded-lg font-medium"
         >
-          {loading ? "..." : "Deposit"}
+          {phase === "approving" ? "Approving..." : phase === "depositing" ? "Depositing..." : "Deposit"}
         </button>
       </div>
+
+      {!CONTRACTS_CONFIGURED && (
+        <p className="text-xs text-yellow-400 mt-3">
+          Set treasury, yield vault, and USDC addresses in frontend env before depositing.
+        </p>
+      )}
+
+      {error && <p className="text-xs text-red-400 mt-3 break-words">{error}</p>}
     </div>
   );
 }

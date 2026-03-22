@@ -54,7 +54,9 @@ contract TreasuryVault {
     }
 
     function allocateToYield(uint256 amount) external onlyApprover {
-        token.safeTransfer(yieldVault, amount);
+        token.forceApprove(yieldVault, amount);
+        MockYieldVaultLike(yieldVault).deposit(amount);
+        token.forceApprove(yieldVault, 0);
         emit AllocatedToYield(amount);
     }
 
@@ -92,5 +94,6 @@ contract TreasuryVault {
 }
 
 interface MockYieldVaultLike {
+    function deposit(uint256 amount) external;
     function withdraw(uint256 amount) external;
 }

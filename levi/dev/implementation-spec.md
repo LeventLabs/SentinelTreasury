@@ -6,6 +6,18 @@
 - Keep delivery aligned across contracts, AI service, and frontend.
 - Track progress in one operational document.
 
+## Status Snapshot
+
+- Contracts exist in repo, but testnet deployment is not yet confirmed in this document.
+- AI service exists and exposes `/health`, `/prices`, and `/recommend`.
+- Frontend exists, but deposit and approve/execute flows are still simulated.
+- Current primary goal is the happy path:
+  - connect wallet
+  - deposit
+  - request recommendation
+  - approve and execute
+- Payout flow is useful for the demo, but not required for the core MVP proof.
+
 ## Current Objective
 
 - Deliver a demoable end-to-end flow on HashKey Chain testnet:
@@ -94,6 +106,7 @@
   - request recommendation
   - approve and execute
   - view reasoning and resulting state
+- Payout can remain outside the primary demo path if the core allocation flow is working reliably.
 - Current gap:
   - `DepositForm.tsx` still simulates deposit
   - `ApprovalFlow.tsx` still simulates execution
@@ -145,7 +158,7 @@
 - Verify balance changes after deposit
 - Verify recommendation payload is shown correctly
 - Verify approve/execute updates on-chain state
-- Verify payout flow if included in demo
+- Verify payout flow only if it is kept in the final demo scope
 
 ### Phase 5 - Demo Readiness
 
@@ -181,7 +194,7 @@
 - [ ] deposit form writes on-chain
 - [ ] recommendation card calls AI service
 - [ ] approval flow executes on-chain action
-- [ ] payout UI works or is explicitly excluded from demo
+- [ ] payout UI works or is explicitly excluded from the final demo scope
 - [ ] loading and error states cover the happy path
 
 ### Integration
