@@ -1,7 +1,7 @@
 # DoraHacks Submission — Sentinel Treasury
 
 ## Project Name
-Sentinel Treasury
+Sentinel Treasury sentineltreasury.com
 
 ## Tagline
 The AI copilot for compliant on-chain treasury management

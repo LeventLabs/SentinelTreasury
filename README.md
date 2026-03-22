@@ -54,7 +54,7 @@ It returns a recommended action, allocation size, and a reasoning payload with r
 - `frontend/`: Next.js dashboard with wallet connect, treasury actions, recommendation UI, and explainability panels
 - `contracts/`: Hardhat workspace for `TreasuryVault` and `MockYieldVault`
 - `ai-service/`: FastAPI recommendation service with deterministic scoring logic
-- `docs/`: product scope, architecture, build plan, and demo/submission material
+- `docs/`: public product and technical docs
 
 ## Quick Start
 
@@ -112,7 +112,7 @@ SentinelTreasury/
 ├── contracts/    # Hardhat project and deployment scripts
 ├── ai-service/   # FastAPI scoring and recommendation service
 ├── frontend/     # Next.js application
-├── docs/         # Product, architecture, and hackathon docs
+├── docs/         # Public product and technical docs
 └── README.md
 ```
 
@@ -129,8 +129,6 @@ SentinelTreasury/
 This project is currently being built as an MVP for the HashKey Chain Horizon Hackathon.
 
 - Core direction is locked in `docs/mvp.md`
-- Build execution plan is tracked in `docs/build-plan.md`
-- Demo flow is defined in `docs/demo-script.md`
 
 ## Hackathon
 
@@ -140,12 +138,8 @@ Tracks: AI, DeFi
 
 ## Documentation
 
-- [Product pitch](/home/levent/Documents/LeventLabs/SentinelTreasury/docs/pitch.md)
 - [MVP definition](/home/levent/Documents/LeventLabs/SentinelTreasury/docs/mvp.md)
 - [Architecture](/home/levent/Documents/LeventLabs/SentinelTreasury/docs/architecture.md)
-- [Build plan](/home/levent/Documents/LeventLabs/SentinelTreasury/docs/build-plan.md)
-- [Demo script](/home/levent/Documents/LeventLabs/SentinelTreasury/docs/demo-script.md)
-- [DoraHacks submission draft](/home/levent/Documents/LeventLabs/SentinelTreasury/docs/dorahacks-submission.md)
 
 ## Disclaimer
 
