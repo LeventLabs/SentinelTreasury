@@ -56,6 +56,7 @@ async def _call_feed(address: str) -> float | None:
 async def get_prices() -> dict:
     """Fetch latest prices from oracle feeds. Falls back to defaults on error."""
     prices = {}
+    used_fallback = False
     for name, address in FEEDS.items():
         price = await _call_feed(address)
         prices[name] = price
@@ -63,7 +64,10 @@ async def get_prices() -> dict:
     # Fallback defaults for demo if oracle is unreachable
     if prices.get("BTC_USD") is None:
         prices["BTC_USD"] = 85000.0
+        used_fallback = True
     if prices.get("USDC_USD") is None:
         prices["USDC_USD"] = 1.0
+        used_fallback = True
 
+    prices["data_source"] = "fallback" if used_fallback else "live"
     return prices

@@ -27,6 +27,7 @@ class Recommendation(BaseModel):
     amount_abs: float
     reasoning: str
     scores: dict
+    data_source: str
 
 
 @app.get("/health")

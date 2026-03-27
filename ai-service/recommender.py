@@ -6,8 +6,9 @@ No ML — deterministic scoring with explainable output.
 
 def recommend(state, prices: dict) -> dict:
     total = state.treasury_balance + state.yield_balance
+    data_source = prices.get("data_source", "fallback")
     if total == 0:
-        return _empty("No funds in treasury.")
+        return _empty("No funds in treasury.", data_source)
 
     # --- Score calculation ---
     yield_score = _yield_score(state.yield_apy)
@@ -28,25 +29,21 @@ def recommend(state, prices: dict) -> dict:
     # Low yield + high risk + high payout pressure = keep in reserve
 
     if payout_score < 40:
-        # Payout obligations too high — keep everything liquid
-        return _hold(state, scores, "Payout obligations require full reserve.")
+        return _hold(state, scores, "Payout obligations require full reserve.", data_source)
 
     if risk_score < 30:
-        # High market risk — pull back
         if state.yield_balance > 0:
-            return _withdraw_from_yield(state, scores, "Market risk elevated, reducing yield exposure.")
-        return _hold(state, scores, "Market risk elevated, holding in reserve.")
+            return _withdraw_from_yield(state, scores, "Market risk elevated, reducing yield exposure.", data_source)
+        return _hold(state, scores, "Market risk elevated, holding in reserve.", data_source)
 
     if yield_score > 60 and liquidity_score > 50:
-        # Good yield, enough liquidity — allocate
         alloc_pct = min(60, max(20, yield_score - 20))
-        # Ensure payout reserve is maintained
         reserve_needed = max(state.pending_payouts * 1.2, total * 0.3)
         max_allocatable = max(0, state.treasury_balance - reserve_needed)
         alloc_amount = min(state.treasury_balance * alloc_pct / 100, max_allocatable)
 
         if alloc_amount < 10:
-            return _hold(state, scores, "Yield attractive but insufficient allocatable balance after reserves.")
+            return _hold(state, scores, "Yield attractive but insufficient allocatable balance after reserves.", data_source)
 
         pct = int(alloc_amount / state.treasury_balance * 100)
         reasoning = (
@@ -61,9 +58,10 @@ def recommend(state, prices: dict) -> dict:
             "amount_abs": round(alloc_amount, 2),
             "reasoning": reasoning,
             "scores": scores,
+            "data_source": data_source,
         }
 
-    return _hold(state, scores, "Conditions do not favor reallocation at this time.")
+    return _hold(state, scores, "Conditions do not favor reallocation at this time.", data_source)
 
 
 def _yield_score(apy: float) -> int:
@@ -107,31 +105,34 @@ def _payout_score(treasury_balance: float, pending: float) -> int:
     return 10  # underfunded
 
 
-def _hold(state, scores, reason):
+def _hold(state, scores, reason, data_source):
     return {
         "action": "hold",
         "amount_pct": 0,
         "amount_abs": 0,
         "reasoning": reason,
         "scores": scores,
+        "data_source": data_source,
     }
 
 
-def _withdraw_from_yield(state, scores, reason):
+def _withdraw_from_yield(state, scores, reason, data_source):
     return {
         "action": "withdraw_from_yield",
         "amount_pct": 100,
         "amount_abs": round(state.yield_balance, 2),
         "reasoning": reason,
         "scores": scores,
+        "data_source": data_source,
     }
 
 
-def _empty(reason):
+def _empty(reason, data_source):
     return {
         "action": "hold",
         "amount_pct": 0,
         "amount_abs": 0,
         "reasoning": reason,
         "scores": {"yield": 0, "liquidity": 0, "risk": 0, "payout_reserve": 0},
+        "data_source": data_source,
     }
