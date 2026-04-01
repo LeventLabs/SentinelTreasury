@@ -7,12 +7,14 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 interface Props {
   treasuryBalance: number;
   yieldBalance: number;
+  yieldApy: number;
   onRecommendation: (rec: any) => void;
 }
 
-export function RecommendationCard({ treasuryBalance, yieldBalance, onRecommendation }: Props) {
+export function RecommendationCard({ treasuryBalance, yieldBalance, yieldApy, onRecommendation }: Props) {
   const [loading, setLoading] = useState(false);
   const [rec, setRec] = useState<any>(null);
+  const [pendingPayouts, setPendingPayouts] = useState("200");
 
   const fetchRecommendation = async () => {
     setLoading(true);
@@ -23,8 +25,8 @@ export function RecommendationCard({ treasuryBalance, yieldBalance, onRecommenda
         body: JSON.stringify({
           treasury_balance: treasuryBalance,
           yield_balance: yieldBalance,
-          yield_apy: 8.0,
-          pending_payouts: 200,
+          yield_apy: yieldApy,
+          pending_payouts: parseFloat(pendingPayouts) || 0,
         }),
       });
       const data = await res.json();
@@ -49,6 +51,17 @@ export function RecommendationCard({ treasuryBalance, yieldBalance, onRecommenda
         </button>
       </div>
 
+      {/* Pending Payouts Input */}
+      <div className="mb-3">
+        <label className="text-xs text-gray-500">Pending Payouts (USDC)</label>
+        <input
+          type="number"
+          value={pendingPayouts}
+          onChange={(e) => setPendingPayouts(e.target.value)}
+          className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-white text-sm mt-1"
+        />
+      </div>
+
       {rec && (
         <div className="space-y-3">
           {/* Action */}
@@ -65,6 +78,11 @@ export function RecommendationCard({ treasuryBalance, yieldBalance, onRecommenda
 
           {/* Reasoning */}
           <p className="text-sm text-gray-300 bg-gray-800 rounded-lg p-3">{rec.reasoning}</p>
+
+          {/* Data source indicator */}
+          {rec.data_source === "fallback" && (
+            <p className="text-xs text-yellow-400">⚠ Using fallback oracle data</p>
+          )}
 
           {/* Scores */}
           {rec.scores && (

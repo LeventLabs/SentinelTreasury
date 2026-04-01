@@ -39,8 +39,16 @@ export function Dashboard() {
     },
   });
 
+  const apyQuery = useReadContract({
+    address: YIELD_VAULT_ADDRESS,
+    abi: YIELD_VAULT_ABI,
+    functionName: "getAPY",
+    query: { enabled: CONTRACTS_CONFIGURED },
+  });
+
   const treasuryBalance = treasuryQuery.data ? Number(formatUnits(treasuryQuery.data, USDC_DECIMALS)) : 0;
   const yieldBalance = yieldQuery.data ? Number(formatUnits(yieldQuery.data, USDC_DECIMALS)) : 0;
+  const yieldApy = apyQuery.data ? Number(apyQuery.data) / 100 : 8.0;
 
   const refreshBalances = () => {
     treasuryQuery.refetch();
@@ -73,6 +81,7 @@ export function Dashboard() {
       <RecommendationCard
         treasuryBalance={treasuryBalance}
         yieldBalance={yieldBalance}
+        yieldApy={yieldApy}
         onRecommendation={setRecommendation}
       />
 
