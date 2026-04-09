@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { formatUnits } from "viem";
 import { useReadContract } from "wagmi";
 import { DepositForm } from "./DepositForm";
@@ -49,6 +49,16 @@ export function Dashboard() {
   const treasuryBalance = treasuryQuery.data ? Number(formatUnits(treasuryQuery.data, USDC_DECIMALS)) : 0;
   const yieldBalance = yieldQuery.data ? Number(formatUnits(yieldQuery.data, USDC_DECIMALS)) : 0;
   const yieldApy = apyQuery.data ? Number(apyQuery.data) / 100 : 8.0;
+
+  // Staleness invalidation: clear recommendation when balances change
+  const prevBalances = useRef({ treasury: treasuryBalance, yield: yieldBalance });
+  useEffect(() => {
+    const prev = prevBalances.current;
+    if (prev.treasury !== treasuryBalance || prev.yield !== yieldBalance) {
+      setRecommendation(null);
+    }
+    prevBalances.current = { treasury: treasuryBalance, yield: yieldBalance };
+  }, [treasuryBalance, yieldBalance]);
 
   const refreshBalances = () => {
     treasuryQuery.refetch();

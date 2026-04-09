@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -15,6 +15,16 @@ export function RecommendationCard({ treasuryBalance, yieldBalance, yieldApy, on
   const [loading, setLoading] = useState(false);
   const [rec, setRec] = useState<any>(null);
   const [pendingPayouts, setPendingPayouts] = useState("200");
+
+  // Clear local recommendation when balances change (staleness)
+  const prevBalances = useRef({ treasury: treasuryBalance, yield: yieldBalance });
+  useEffect(() => {
+    const prev = prevBalances.current;
+    if (prev.treasury !== treasuryBalance || prev.yield !== yieldBalance) {
+      setRec(null);
+    }
+    prevBalances.current = { treasury: treasuryBalance, yield: yieldBalance };
+  }, [treasuryBalance, yieldBalance]);
 
   const fetchRecommendation = async () => {
     setLoading(true);
@@ -34,6 +44,7 @@ export function RecommendationCard({ treasuryBalance, yieldBalance, yieldApy, on
       onRecommendation(data);
     } catch {
       setRec({ action: "error", reasoning: "Failed to reach AI service." });
+      onRecommendation(null);
     }
     setLoading(false);
   };
