@@ -10,6 +10,7 @@ import {
   TREASURY_ADDRESS,
   USDC_DECIMALS,
 } from "@/config/contracts";
+import { friendlyError } from "@/utils/errors";
 
 interface Props {
   recommendation: any;
@@ -55,8 +56,7 @@ export function ApprovalFlow({ recommendation, onExecuted }: Props) {
       setStatus("done");
       setTimeout(onExecuted, 1000);
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Execution failed.";
-      setError(message);
+      setError(friendlyError(err));
       setStatus("pending");
     }
   };

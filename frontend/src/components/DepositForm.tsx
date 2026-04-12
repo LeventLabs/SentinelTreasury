@@ -12,6 +12,7 @@ import {
   USDC_ADDRESS,
   USDC_DECIMALS,
 } from "@/config/contracts";
+import { friendlyError } from "@/utils/errors";
 
 interface Props {
   onDeposit: () => void;
@@ -56,8 +57,7 @@ export function DepositForm({ onDeposit }: Props) {
       setAmount("");
       onDeposit();
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Deposit failed.";
-      setError(message);
+      setError(friendlyError(err));
     } finally {
       setPhase("idle");
     }
