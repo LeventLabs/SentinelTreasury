@@ -29,7 +29,7 @@ Build an explainable treasury copilot that recommends how much capital should st
 - Returns an action, allocation percentage, and human-readable reasoning
 
 ### 5. Oracle Inputs
-- SUPRA / APRO feeds for market data
+- APRO feeds for market data
 - Used to derive risk and volatility signals
 - Should support fallback mock values for demo continuity
 

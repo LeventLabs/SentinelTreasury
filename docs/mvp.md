@@ -24,7 +24,7 @@
 ## AI Logic
 
 **Inputs:**
-- Oracle price feeds (SUPRA/APRO): BTC/USD, USDC/USD, HSK/USD
+- Oracle price feeds (APRO): BTC/USD, USDC/USD
 - Treasury vault balance
 - Yield vault balance + APY
 - Pending payout obligations (manual input or mock)

@@ -31,7 +31,7 @@ Sentinel Treasury tries to connect these layers into one operating flow.
 User → Wallet Connect → TreasuryVault (on-chain)
                               ↓
                     AI Service (off-chain)
-                    ├── Oracle feeds (SUPRA/APRO)
+                    ├── Oracle feeds (APRO)
                     ├── Rule-based scoring engine
                     └── Recommendation + reasoning
                               ↓
@@ -78,7 +78,7 @@ npx hardhat run scripts/deploy.ts --network hashkeyTestnet
 ```bash
 cd ai-service
 pip install -r requirements.txt
-cp .env.example .env   # add contract addresses
+cp .env.example .env   # defaults work for HashKey testnet
 uvicorn main:app --reload --port 8000
 ```
 
@@ -101,9 +101,8 @@ Each app has its own example env file:
 At minimum, expect to configure:
 
 - private key / deployer wallet
-- contract addresses
 - API base URL
-- chain-specific addresses such as testnet USDC
+- deployed contract addresses (output of deploy script)
 
 ## Repo Structure
 
@@ -126,11 +125,11 @@ SentinelTreasury/
 
 ## Current Status
 
-MVP is complete and deployed on HashKey Chain Testnet.
+MVP is functional and deployed on HashKey Chain Testnet.
 
 - 3 contracts deployed and verified on Blockscout
 - 77 automated tests (45 contract + 32 AI service)
-- Full end-to-end flow verified: deposit → recommend → approve → execute
+- End-to-end flow manually verified: deposit → recommend → approve → execute
 
 ## Deployed Contracts
 
@@ -148,8 +147,8 @@ Tracks: AI, DeFi
 
 ## Documentation
 
-- [MVP definition](/home/levent/Documents/LeventLabs/SentinelTreasury/docs/mvp.md)
-- [Architecture](/home/levent/Documents/LeventLabs/SentinelTreasury/docs/architecture.md)
+- [MVP definition](docs/mvp.md)
+- [Architecture](docs/architecture.md)
 
 ## Disclaimer
 
