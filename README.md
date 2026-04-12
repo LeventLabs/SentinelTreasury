@@ -69,7 +69,7 @@ It returns a recommended action, allocation size, and a reasoning payload with r
 ```bash
 cd contracts
 npm install
-cp .env.example .env   # add PRIVATE_KEY + USDC_ADDRESS
+cp .env.example .env   # add PRIVATE_KEY
 npx hardhat compile
 npx hardhat run scripts/deploy.ts --network hashkeyTestnet
 ```
@@ -126,9 +126,19 @@ SentinelTreasury/
 
 ## Current Status
 
-This project is currently being built as an MVP for the HashKey Chain Horizon Hackathon.
+MVP is complete and deployed on HashKey Chain Testnet.
 
-- Core direction is locked in `docs/mvp.md`
+- 3 contracts deployed and verified on Blockscout
+- 77 automated tests (45 contract + 32 AI service)
+- Full end-to-end flow verified: deposit → recommend → approve → execute
+
+## Deployed Contracts
+
+| Contract | Address |
+|----------|---------|
+| MockERC20 (USDC) | [`0xbE6962010697f1B914166209a0E5B18A56bf5708`](https://testnet-explorer.hsk.xyz/address/0xbE6962010697f1B914166209a0E5B18A56bf5708#code) |
+| MockYieldVault | [`0x056E4680a3d13A454e8Cc1EA06b9c7df9e2C5f5A`](https://testnet-explorer.hsk.xyz/address/0x056E4680a3d13A454e8Cc1EA06b9c7df9e2C5f5A#code) |
+| TreasuryVault | [`0xD45883b809E25FDe337DcFeC24B9844A294cb3F5`](https://testnet-explorer.hsk.xyz/address/0xD45883b809E25FDe337DcFeC24B9844A294cb3F5#code) |
 
 ## Hackathon
 
