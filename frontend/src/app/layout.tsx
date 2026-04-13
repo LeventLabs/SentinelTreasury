@@ -5,7 +5,7 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "Sentinel Treasury",
   description: "AI copilot for compliant on-chain treasury management",
-  icons: { icon: "/favicon.svg" },
+  icons: { icon: "/logo.png" },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
