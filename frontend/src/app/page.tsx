@@ -20,8 +20,13 @@ export default function Home() {
       {isConnected ? (
         <Dashboard />
       ) : (
-        <div className="text-center py-32 text-gray-500">
-          Connect your wallet to get started.
+        <div className="text-center py-24 space-y-4">
+          <div className="text-5xl">🛡️</div>
+          <h2 className="text-xl font-semibold text-white">Treasury Management, Simplified</h2>
+          <p className="text-gray-400 max-w-md mx-auto">
+            Deposit funds, get AI-powered allocation recommendations with explainable scores, and execute on-chain with one click.
+          </p>
+          <p className="text-gray-600 text-sm pt-4">Connect your wallet to get started.</p>
         </div>
       )}
     </main>
