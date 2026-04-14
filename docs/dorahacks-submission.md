@@ -101,6 +101,8 @@ All contracts are verified on Blockscout:
 ## Links
 
 - **GitHub**: https://github.com/LeventLabs/SentinelTreasury
+- **Live App**: https://sentineltreasury.com
+- **Demo Video**: https://youtu.be/c5eBq2aXRPA
 - **Domain**: sentineltreasury.com
 
 ## Team

@@ -123,6 +123,10 @@ SentinelTreasury/
 | Chain ID | 133 |
 | Explorer | https://testnet-explorer.hsk.xyz |
 
+## Demo
+
+[![Demo Video](https://img.youtube.com/vi/c5eBq2aXRPA/maxresdefault.jpg)](https://youtu.be/c5eBq2aXRPA)
+
 ## Current Status
 
 MVP is functional and deployed on HashKey Chain Testnet.
