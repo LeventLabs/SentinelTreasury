@@ -104,7 +104,7 @@ export function RecommendationCard({ treasuryBalance, yieldBalance, yieldApy, on
             <div className="grid grid-cols-4 gap-2">
               {Object.entries(rec.scores).map(([key, val]) => (
                 <div key={key} className="text-center">
-                  <div className="text-xs text-gray-500 capitalize">{key.replace("_", " ")}</div>
+                  <div className="text-xs text-gray-300 capitalize">{key.replace("_", " ")}</div>
                   <div className={`text-lg font-bold ${
                     (val as number) >= 70 ? "text-green-400" : (val as number) >= 40 ? "text-yellow-400" : "text-red-400"
                   }`}>
