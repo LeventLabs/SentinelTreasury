@@ -29,6 +29,8 @@ export function RecommendationCard({ treasuryBalance, yieldBalance, yieldApy, on
   const fetchRecommendation = async () => {
     setLoading(true);
     try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 30000);
       const res = await fetch(`${API_URL}/recommend`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -38,7 +40,9 @@ export function RecommendationCard({ treasuryBalance, yieldBalance, yieldApy, on
           yield_apy: yieldApy,
           pending_payouts: parseFloat(pendingPayouts) || 0,
         }),
+        signal: controller.signal,
       });
+      clearTimeout(timeout);
       const data = await res.json();
       setRec(data);
       onRecommendation(data);
