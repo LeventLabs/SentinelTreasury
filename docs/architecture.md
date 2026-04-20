@@ -16,6 +16,8 @@ Build an explainable treasury copilot that recommends how much capital should st
 - Holds treasury funds
 - Supports deposit, withdraw, payout, and allocation into the mock yield vault
 - Stores simple approval state for policy-gated execution
+- Reads an `IKycSBT`-compatible SBT to gate sensitive actions by tier (Phase 2)
+- Reads an APRO `AggregatorV3` USDC/USD feed to gate `allocateToYield` on peg deviation (Phase 2)
 
 ### 3. Yield Contract Layer
 - `MockYieldVault.sol`
@@ -53,28 +55,29 @@ Build an explainable treasury copilot that recommends how much capital should st
 {
   "inputs": {
     "treasury_balance": 1000,
-    "yield_vault_balance": 0,
+    "yield_balance": 0,
     "yield_apy": 8,
     "pending_payouts": 200,
-    "prices": {
-      "BTC_USD": 83000,
-      "USDC_USD": 1,
-      "HSK_USD": 0.75
-    }
+    "treasury_hsk_balance": 0.3
   },
   "output": {
     "action": "allocate_to_yield",
-    "amount_pct": 40,
-    "reasoning": "Move 40% to Yield Vault, keep 60% in Reserve because payout obligation is due and volatility threshold is elevated.",
+    "amount_pct": 60,
+    "amount_abs": 600.0,
+    "reasoning": "Move 60% to Yield Vault (APY 8%). Keep 40% in Reserve. Payout reserve of 200 is covered. Risk level acceptable.",
     "scores": {
-      "yield": 72,
-      "liquidity": 85,
-      "risk": 45,
-      "payout_reserve": 90
-    }
+      "yield": 80,
+      "liquidity": 100,
+      "risk": 85,
+      "payout_reserve": 95,
+      "gas_reserve": 70
+    },
+    "data_source": "live"
   }
 }
 ```
+
+Prices are fetched server-side from the APRO oracle on HashKey Chain (`/prices` endpoint). The AI service also accepts client-supplied `treasury_hsk_balance` because the backend does not hold a wallet and therefore cannot query the treasury contract's native balance itself — the frontend reads it via `useBalance` and forwards it.
 
 ## Design Decisions
 - Rule-based AI instead of LLM/ML:
@@ -106,3 +109,44 @@ Build an explainable treasury copilot that recommends how much capital should st
 - Keep oracle mocks available behind a simple toggle
 - Pre-fund wallets and pre-deploy contracts before recording
 - Treat KYC as optional polish, not core scope
+
+## Phase 2 Delta (HashKey-Native Core)
+
+Phase 2 adds three HashKey-native primitives on top of the MVP architecture. All three integrations are additive — when their setters are unconfigured, the MVP behavior is unchanged and the original 45 MVP contract tests continue to pass.
+
+### New contract: `MockKycSBT`
+Demo stand-in for the canonical HashKey KYC SBT. Implements the full `IKycSBT` interface (`requestKyc`, `isHuman`, `revokeKyc`, `restoreKyc`, `getKycInfo`, `approveEnsName`, `isEnsNameApproved`) plus an owner-only `setKycInfo` for tier seeding and `getTotalFee`/`setTotalFee`. This contract is demo-only — it is **not** a production-grade identity contract. Migration to the canonical SBT is a single `TreasuryVault.setKycSBT(newAddress)` call.
+
+### `TreasuryVault` gates
+- `deposit` → requires `isHuman(caller) == true` (any tier ≥ BASIC)
+- `addApprover(a)` → requires `level(a) ≥ ADVANCED`
+- `payout` → requires `level(msg.sender) ≥ PREMIUM`
+- `allocateToYield` → passes through the APRO peg gate (see below)
+- `removeApprover`, `withdraw`, `withdrawFromYield` remain ungated so operators can exit during KYC-system outages
+
+### APRO peg gate
+- Reads the APRO USDC/USD `AggregatorV3` feed (8 decimals)
+- Reverts `"peg deviation"` if `|answer - 1e8| > 5e5` (i.e. > 0.5% off peg)
+- Reverts `"bad feed"` if the feed returns `answer ≤ 0`
+- Gate is **unidirectional**: only `allocateToYield` is gated; exits (`withdrawFromYield`, `withdraw`, `payout`) are always permitted
+- No caching — the feed is read every call so feed updates take effect immediately
+- No staleness check — the feed's `answer > 0` sanity is sufficient for the demo and avoids false reverts during testnet oracle downtime
+
+### AI service: `gas_reserve` score
+- New Pydantic field on `TreasuryState`: `treasury_hsk_balance: float` (default `1.0` so existing clients do not regress)
+- New scoring function `gas_reserve_score(hsk_balance)` with thresholds: `≥1.0 → 95`, `≥0.2 → 70`, `≥0.05 → 40`, `≥0.01 → 20`, else `5`
+- New decision-tree branch: `IF gas_reserve_score < 30 → hold("Gas reserve too low…")` evaluated before the payout-reserve branch
+- Scores dict now has five fields: `yield`, `liquidity`, `risk`, `payout_reserve`, `gas_reserve`
+
+### Frontend changes
+- `KycBadge` component renders the connected wallet's tier as a colored badge; hides cleanly when `NEXT_PUBLIC_KYC_SBT_ADDRESS` is unset
+- `RequestKycButton` calls `requestKyc("<short>.sentinel", { value: getTotalFee() })` and refetches `isHuman` on confirmation
+- Dashboard reads the treasury's native HSK balance via `useBalance` and forwards it to the `/recommend` POST body as `treasury_hsk_balance`
+- Explainability panel renders 5 score tiles (responsive: 3 columns on mobile, 5 on `sm+`)
+- "Phase 2 Roadmap" panel links to the already-deployed `KycTierProofVerifier` on HashKey testnet as the credible ZKID migration path — the panel is static content, no ZK code ships in this submission
+
+### What Phase 2 does **not** ship
+- No PolicyVault contract — tier checks live inline in `TreasuryVault`
+- No ZK proof generation or verification — zkFabric is roadmap only
+- No multi-stablecoin support — USDT feed is mislabeled on HashKey testnet, so only USDC peg is gated
+- No staleness check on the APRO feed — trade-off accepted to avoid demo-day false reverts

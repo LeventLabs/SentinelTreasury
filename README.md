@@ -28,33 +28,48 @@ Sentinel Treasury tries to connect these layers into one operating flow.
 ## How It Works
 
 ```
-User → Wallet Connect → TreasuryVault (on-chain)
-                              ↓
-                    AI Service (off-chain)
-                    ├── Oracle feeds (APRO)
-                    ├── Rule-based scoring engine
-                    └── Recommendation + reasoning
-                              ↓
-                    Approver confirms → Execute on-chain
-                              ↓
-                    Dashboard shows reasoning
+User → Wallet Connect → KYC SBT check → TreasuryVault (on-chain)
+                                                ↓
+                            allocateToYield ⇢ APRO peg gate (USDC/USD)
+                                                ↓
+                                       AI Service (off-chain)
+                                       ├── Oracle feeds (APRO)
+                                       ├── Rule-based scoring engine (5 signals)
+                                       └── Recommendation + reasoning
+                                                ↓
+                                      Approver confirms → Execute on-chain
+                                                ↓
+                                      Dashboard shows reasoning
 ```
 
 The recommendation engine evaluates:
 
 - treasury balance
 - yield vault balance and APY
-- market inputs from oracle feeds
+- market inputs from oracle feeds (APRO)
 - pending payout obligations
+- native HSK gas reserve on the treasury
 
-It returns a recommended action, allocation size, and a reasoning payload with readable scores.
+It returns a recommended action, allocation size, and a reasoning payload with five explainable scores (`yield`, `liquidity`, `risk`, `payout reserve`, `gas reserve`).
+
+On-chain, deposits require a KYC SBT on the caller, approver appointments require an `ADVANCED` or higher tier, and `payout` requires `PREMIUM` or higher. Allocations to the yield vault are additionally gated by an APRO USDC/USD peg check — if USDC deviates more than 0.5% from $1.00, the allocation reverts while `deposit`, `withdraw`, `withdrawFromYield`, and `payout` remain available so operators can always exit during depeg stress.
 
 ## Core Components
 
-- `frontend/`: Next.js dashboard with wallet connect, treasury actions, recommendation UI, and explainability panels
-- `contracts/`: Hardhat workspace for `TreasuryVault` and `MockYieldVault`
+- `frontend/`: Next.js dashboard with wallet connect, treasury actions, recommendation UI, KYC badge + Request KYC button, and explainability panels
+- `contracts/`: Hardhat workspace for `TreasuryVault`, `MockYieldVault`, and `MockKycSBT` (demo stand-in for the canonical HashKey KYC SBT)
 - `ai-service/`: FastAPI recommendation service with deterministic scoring logic
 - `docs/`: public product and technical docs
+
+## Phase 2: HashKey-Native Primitives
+
+Phase 2 layers three HashKey-native integrations on top of the MVP, preserving all existing behavior when the gates are unset:
+
+- **KYC SBT gating.** `TreasuryVault` reads an `IKycSBT`-compatible contract to gate `deposit` (any tier), `addApprover` (ADVANCED+), and `payout` (PREMIUM+). When no KYC SBT address is configured, all gates short-circuit and MVP behavior is unchanged. The demo ships `MockKycSBT` which implements the full canonical interface; the production migration path is to point the same setter at the canonical HashKey KYC SBT when available.
+- **APRO USDC/USD peg gate.** `allocateToYield` consults an APRO `AggregatorV3`-compatible feed and reverts with `peg deviation` if USDC is more than 0.5% off peg. The gate is unidirectional by design: it blocks risky allocations while leaving withdrawals and payouts fully operational during depeg events.
+- **Gas-reserve signal in AI scoring.** The recommendation engine reads the treasury's native HSK balance and emits a `gas_reserve` score. If the reserve is too low, the AI returns `hold` with an actionable reason ("top up HSK") rather than recommending further on-chain operations the treasury cannot pay gas for.
+
+A **Phase 2 Roadmap** panel in the dashboard links to the already-deployed `KycTierProofVerifier` on HashKey testnet as the credible ZKID migration path. Phase 2 itself does not ship ZK proofs — zkFabric integration is deferred to a next sprint.
 
 ## Quick Start
 
@@ -132,19 +147,22 @@ SentinelTreasury/
 
 ## Current Status
 
-MVP is functional and deployed on HashKey Chain Testnet.
+Phase 2 is live on HashKey Chain Testnet. `TreasuryVault` now enforces KYC-SBT tier gates, the APRO USDC/USD peg gate, and the AI recommendation engine scores treasury gas reserves.
 
-- 3 contracts deployed and verified on Blockscout
-- 77 automated tests (45 contract + 32 AI service)
-- End-to-end flow manually verified: deposit → recommend → approve → execute
+- 4 contracts deployed and verified on Blockscout (TreasuryVault, MockYieldVault, MockERC20, MockKycSBT)
+- 157 automated tests (109 contract + 48 AI service)
+- End-to-end flow verified: request KYC → deposit → recommend (5 scores) → approve (peg gate) → execute
 
-## Deployed Contracts
+## Deployed Contracts (HashKey Chain Testnet, Phase 2)
 
 | Contract | Address |
 |----------|---------|
-| MockERC20 (USDC) | [`0xbE6962010697f1B914166209a0E5B18A56bf5708`](https://testnet-explorer.hsk.xyz/address/0xbE6962010697f1B914166209a0E5B18A56bf5708#code) |
-| MockYieldVault | [`0x056E4680a3d13A454e8Cc1EA06b9c7df9e2C5f5A`](https://testnet-explorer.hsk.xyz/address/0x056E4680a3d13A454e8Cc1EA06b9c7df9e2C5f5A#code) |
-| TreasuryVault | [`0xD45883b809E25FDe337DcFeC24B9844A294cb3F5`](https://testnet-explorer.hsk.xyz/address/0xD45883b809E25FDe337DcFeC24B9844A294cb3F5#code) |
+| MockERC20 (USDC) | [`0x06Dd39741a02DdA6105505BE4073aDbbf393701C`](https://testnet-explorer.hsk.xyz/address/0x06Dd39741a02DdA6105505BE4073aDbbf393701C#code) |
+| MockYieldVault | [`0x3f0335AeA55FD00E85DC8DA345F67fFba0730774`](https://testnet-explorer.hsk.xyz/address/0x3f0335AeA55FD00E85DC8DA345F67fFba0730774#code) |
+| TreasuryVault | [`0xCd93E05Df0C0bB8C40a9BD592b4bB4d1a6DaE931`](https://testnet-explorer.hsk.xyz/address/0xCd93E05Df0C0bB8C40a9BD592b4bB4d1a6DaE931#code) |
+| MockKycSBT | [`0x5cEd9f517101B25D575aA19f620077543cA83454`](https://testnet-explorer.hsk.xyz/address/0x5cEd9f517101B25D575aA19f620077543cA83454#code) |
+
+The TreasuryVault is wired to the APRO USDC/USD feed at [`0xCdB1…fAE27`](https://testnet-explorer.hsk.xyz/address/0xCdB10dC9dB30B6ef2a63aB4460263655808fAE27).
 
 ## Hackathon
 

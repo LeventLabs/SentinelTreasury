@@ -1,13 +1,16 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { formatUnits } from "viem";
-import { useReadContract } from "wagmi";
+import { formatEther, formatUnits } from "viem";
+import { useAccount, useBalance, useReadContract } from "wagmi";
 import { DepositForm } from "./DepositForm";
 import { RecommendationCard } from "./RecommendationCard";
 import { ApprovalFlow } from "./ApprovalFlow";
+import { KycBadge } from "./KycBadge";
+import { RequestKycButton } from "./RequestKycButton";
 import {
   CONTRACTS_CONFIGURED,
+  KYC_SBT_CONFIGURED,
   TREASURY_ABI,
   TREASURY_ADDRESS,
   USDC_DECIMALS,
@@ -15,8 +18,13 @@ import {
   YIELD_VAULT_ADDRESS,
 } from "@/config/contracts";
 
+// HashKey testnet Blockscout + reference ZKID deployment from hashkey-core/design.md §Phase 2 Roadmap.
+const EXPLORER_URL = "https://testnet-explorer.hsk.xyz";
+const KYC_TIER_PROOF_VERIFIER = "0x3b395F1920fddEB3aB0BCD5a1eab9F4B393c4bbc";
+
 export function Dashboard() {
   const [recommendation, setRecommendation] = useState<any>(null);
+  const { address } = useAccount();
 
   const treasuryQuery = useReadContract({
     address: TREASURY_ADDRESS,
@@ -46,9 +54,18 @@ export function Dashboard() {
     query: { enabled: CONTRACTS_CONFIGURED },
   });
 
+  const treasuryHskQuery = useBalance({
+    address: TREASURY_ADDRESS,
+    query: {
+      enabled: CONTRACTS_CONFIGURED,
+      refetchInterval: 10000,
+    },
+  });
+
   const treasuryBalance = treasuryQuery.data ? Number(formatUnits(treasuryQuery.data, USDC_DECIMALS)) : 0;
   const yieldBalance = yieldQuery.data ? Number(formatUnits(yieldQuery.data, USDC_DECIMALS)) : 0;
   const yieldApy = apyQuery.data ? Number(apyQuery.data) / 100 : 8.0;
+  const treasuryHsk = treasuryHskQuery.data ? parseFloat(formatEther(treasuryHskQuery.data.value)) : 0;
 
   // Staleness invalidation: clear recommendation when balances change
   const prevBalances = useRef({ treasury: treasuryBalance, yield: yieldBalance });
@@ -63,11 +80,21 @@ export function Dashboard() {
   const refreshBalances = () => {
     treasuryQuery.refetch();
     yieldQuery.refetch();
+    treasuryHskQuery.refetch();
     setRecommendation(null);
   };
 
   return (
     <div className="space-y-6">
+      {/* KYC row */}
+      <div className="flex items-center justify-between bg-gray-900 rounded-xl px-4 py-3 border border-gray-800">
+        <div className="flex items-center gap-3">
+          <span className="text-xs text-gray-500">Your KYC status:</span>
+          <KycBadge address={address} />
+        </div>
+        <RequestKycButton address={address} onSuccess={refreshBalances} />
+      </div>
+
       {/* Portfolio Overview */}
       <div className="grid grid-cols-3 gap-4">
         <div className="bg-gray-900 rounded-xl p-5 border border-gray-800">
@@ -84,6 +111,11 @@ export function Dashboard() {
         </div>
       </div>
 
+      <p className="text-xs text-gray-500 -mt-3 pl-1">
+        Treasury HSK: {treasuryHsk.toFixed(3)} HSK
+        <span className="ml-2 text-gray-600">(gas reserve for on-chain operations)</span>
+      </p>
+
       {/* Deposit */}
       <DepositForm onDeposit={refreshBalances} />
 
@@ -92,6 +124,7 @@ export function Dashboard() {
         treasuryBalance={treasuryBalance}
         yieldBalance={yieldBalance}
         yieldApy={yieldApy}
+        treasuryHsk={treasuryHsk}
         onRecommendation={setRecommendation}
       />
 
@@ -102,6 +135,34 @@ export function Dashboard() {
           onExecuted={refreshBalances}
         />
       )}
+
+      {/* Phase 2 Roadmap — ZKID visibility without shipping ZK code (R21). */}
+      <div className="bg-gray-900/50 rounded-xl p-4 border border-gray-800/80 text-sm">
+        <p className="font-semibold text-gray-300 mb-2">Phase 2 Roadmap</p>
+        <ul className="space-y-1 text-gray-400">
+          <li>
+            • ZK tier-proof verification via{" "}
+            <a
+              href={`${EXPLORER_URL}/address/${KYC_TIER_PROOF_VERIFIER}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-400 hover:underline"
+            >
+              KycTierProofVerifier
+            </a>{" "}
+            <span className="text-gray-600 font-mono text-xs">
+              ({KYC_TIER_PROOF_VERIFIER.slice(0, 6)}…{KYC_TIER_PROOF_VERIFIER.slice(-4)})
+            </span>
+          </li>
+          <li>• zkFabric Registry ingestion via KYCSBTAdapter</li>
+          <li>• Migration to canonical HashKey KYC SBT when deployed</li>
+        </ul>
+        {!KYC_SBT_CONFIGURED && (
+          <p className="mt-3 text-xs text-gray-500">
+            Note: KYC gating is currently disabled (no KYC SBT address configured).
+          </p>
+        )}
+      </div>
     </div>
   );
 }

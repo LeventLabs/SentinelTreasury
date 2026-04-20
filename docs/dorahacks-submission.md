@@ -31,14 +31,18 @@ The AI service evaluates:
 - Yield APY (read from chain)
 - Oracle price feeds (APRO on HashKey Chain)
 - Pending payout obligations (operator input)
+- Treasury's native HSK gas reserve
 
-It returns a recommended action (`allocate_to_yield`, `withdraw_from_yield`, or `hold`), an allocation amount, and a reasoning payload with four explainable scores: yield, liquidity, risk, and payout reserve.
+It returns a recommended action (`allocate_to_yield`, `withdraw_from_yield`, or `hold`), an allocation amount, and a reasoning payload with five explainable scores: yield, liquidity, risk, payout reserve, and gas reserve.
 
 ## Key Features
 
-- **Explainable AI**: Every recommendation includes four scored dimensions with color-coded indicators and human-readable reasoning
+- **Explainable AI**: Every recommendation includes five scored dimensions with color-coded indicators and human-readable reasoning
 - **Policy-Gated Execution**: No autonomous fund movement — an approver must confirm every action
+- **KYC-Gated Treasury Actions**: Deposits require a KYC SBT; approver appointments require ADVANCED+; payouts require PREMIUM+. Uses an `IKycSBT`-compatible contract so the demo-day `MockKycSBT` can be swapped for the canonical HashKey KYC SBT via a single owner-only setter
+- **APRO Peg Gate**: `allocateToYield` reverts if the APRO USDC/USD feed shows more than 0.5% deviation from peg, while `deposit`, `withdraw`, `withdrawFromYield`, and `payout` remain available so operators can always exit during depeg stress
 - **Oracle-Aware Risk Scoring**: USDC depeg detection via APRO price feeds with automatic fallback and visible indicator
+- **Gas-Reserve Awareness**: AI returns `hold` with an actionable reason when the treasury's native HSK balance is too low to safely fund future on-chain operations
 - **Staleness Protection**: Recommendations auto-clear when balances change, preventing execution on stale data
 - **Deterministic Logic**: Identical inputs always produce identical outputs — fully auditable
 
@@ -46,7 +50,7 @@ It returns a recommended action (`allocate_to_yield`, `withdraw_from_yield`, or 
 
 | Layer | Technology |
 |-------|-----------|
-| Smart Contracts | Solidity 0.8.24, Hardhat, OpenZeppelin 5.x |
+| Smart Contracts | Solidity 0.8.24, Hardhat, OpenZeppelin 5.x, `IKycSBT` + APRO `AggregatorV3` interfaces |
 | Frontend | Next.js 14, React 18, TypeScript, Tailwind CSS |
 | Wallet | wagmi v2, RainbowKit, viem |
 | AI Service | Python, FastAPI, Pydantic |
@@ -59,25 +63,29 @@ All contracts are verified on Blockscout:
 
 | Contract | Address | Explorer |
 |----------|---------|----------|
-| MockERC20 (USDC) | `0xbE6962010697f1B914166209a0E5B18A56bf5708` | [View](https://testnet-explorer.hsk.xyz/address/0xbE6962010697f1B914166209a0E5B18A56bf5708#code) |
-| MockYieldVault | `0x056E4680a3d13A454e8Cc1EA06b9c7df9e2C5f5A` | [View](https://testnet-explorer.hsk.xyz/address/0x056E4680a3d13A454e8Cc1EA06b9c7df9e2C5f5A#code) |
-| TreasuryVault | `0xD45883b809E25FDe337DcFeC24B9844A294cb3F5` | [View](https://testnet-explorer.hsk.xyz/address/0xD45883b809E25FDe337DcFeC24B9844A294cb3F5#code) |
+| MockERC20 (USDC) | `0x06Dd39741a02DdA6105505BE4073aDbbf393701C` | [View](https://testnet-explorer.hsk.xyz/address/0x06Dd39741a02DdA6105505BE4073aDbbf393701C#code) |
+| MockYieldVault | `0x3f0335AeA55FD00E85DC8DA345F67fFba0730774` | [View](https://testnet-explorer.hsk.xyz/address/0x3f0335AeA55FD00E85DC8DA345F67fFba0730774#code) |
+| TreasuryVault | `0xCd93E05Df0C0bB8C40a9BD592b4bB4d1a6DaE931` | [View](https://testnet-explorer.hsk.xyz/address/0xCd93E05Df0C0bB8C40a9BD592b4bB4d1a6DaE931#code) |
+| MockKycSBT | `0x5cEd9f517101B25D575aA19f620077543cA83454` | [View](https://testnet-explorer.hsk.xyz/address/0x5cEd9f517101B25D575aA19f620077543cA83454#code) |
+
+External reference — APRO USDC/USD feed: [`0xCdB10dC9dB30B6ef2a63aB4460263655808fAE27`](https://testnet-explorer.hsk.xyz/address/0xCdB10dC9dB30B6ef2a63aB4460263655808fAE27).
 
 ## Test Coverage
 
-- **45 contract unit tests** — deposit, withdraw, allocate, payout, access control, approver management
-- **32 AI service tests** — scoring functions, decision logic branches, determinism, data_source propagation
+- **109 contract unit tests** — deposit, withdraw, allocate, payout, access control, approver management, `MockKycSBT` behavior (28 tests), TreasuryVault KYC gating (20 tests), and APRO peg gate (16 tests)
+- **48 AI service tests** — scoring functions, decision logic branches, determinism, data_source propagation, gas-reserve score thresholds (10 tests), and gas-reserve decision branch (4 tests)
 
 ## Demo Flow
 
 1. Connect wallet to HashKey Chain Testnet
-2. Deposit 1,000 USDC into TreasuryVault
-3. Click "Get Recommendation" (pending payouts = 200)
-4. AI recommends: `allocate_to_yield` — $600 (60%)
-5. Review scores: yield=80, liquidity=100, risk=85, payout_reserve=95
-6. Click "Approve & Execute"
-7. Funds move on-chain: Treasury=$400, Yield=$600
-8. Change pending payouts to 900 → AI recommends `hold`
+2. **Request KYC** → MockKycSBT mints a BASIC tier SBT to the connected address (badge flips from "No KYC" → "BASIC")
+3. Deposit 1,000 USDC into TreasuryVault (KYC gate passes)
+4. Click "Get Recommendation" (pending payouts = 200)
+5. AI recommends: `allocate_to_yield` — $600 (60%)
+6. Review five explainable scores: yield, liquidity, risk, payout reserve, gas reserve
+7. Click "Approve & Execute" → APRO USDC/USD peg gate reads ≈ $1.00 → allocation succeeds
+8. Funds move on-chain: Treasury=$400, Yield=$600
+9. Change pending payouts to 900 → AI recommends `hold` with "payout obligations require full reserve"
 
 ## Architecture
 
@@ -104,6 +112,11 @@ All contracts are verified on Blockscout:
 - **Live App**: https://sentineltreasury.com
 - **Demo Video**: https://youtu.be/c5eBq2aXRPA
 - **Domain**: sentineltreasury.com
+
+## Roadmap
+
+- **zkFabric / ZKID integration** — integrated in a next sprint. The already-deployed `KycTierProofVerifier` (`0x3b395F…4bbc`) on HashKey testnet is the target verifier; the dashboard already links it from a "Phase 2 Roadmap" panel. This submission does **not** claim the ZKID track and does **not** currently use ZK proofs.
+- **Canonical HashKey KYC SBT migration** — `MockKycSBT` implements the full canonical interface, so migrating is a single owner-only setter call once the production SBT is deployed.
 
 ## Team
 
