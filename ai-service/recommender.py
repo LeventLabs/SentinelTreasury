@@ -7,26 +7,31 @@ No ML — deterministic scoring with explainable output.
 def recommend(state, prices: dict) -> dict:
     total = state.treasury_balance + state.yield_balance
     data_source = prices.get("data_source", "fallback")
+    hsk_balance = getattr(state, "treasury_hsk_balance", 1.0)
     if total == 0:
-        return _empty("No funds in treasury.", data_source)
+        return _empty("No funds in treasury.", data_source, hsk_balance)
 
     # --- Score calculation ---
     yield_score = _yield_score(state.yield_apy)
     liquidity_score = _liquidity_score(state.treasury_balance, total)
     risk_score = _risk_score(prices)
     payout_score = _payout_score(state.treasury_balance, state.pending_payouts)
+    gas_score = gas_reserve_score(hsk_balance)
 
     scores = {
         "yield": yield_score,
         "liquidity": liquidity_score,
         "risk": risk_score,
         "payout_reserve": payout_score,
+        "gas_reserve": gas_score,
     }
 
     # --- Decision logic ---
-    # How much of treasury balance should go to yield?
     # High yield + low risk + low payout pressure = allocate more
     # Low yield + high risk + high payout pressure = keep in reserve
+
+    if gas_score < 30:
+        return _hold(state, scores, "Gas reserve too low for further operations; top up HSK on the treasury.", data_source)
 
     if payout_score < 40:
         return _hold(state, scores, "Payout obligations require full reserve.", data_source)
@@ -105,6 +110,19 @@ def _payout_score(treasury_balance: float, pending: float) -> int:
     return 10  # underfunded
 
 
+def gas_reserve_score(hsk_balance: float) -> int:
+    """0-100. Higher = more HSK runway for future on-chain operations."""
+    if hsk_balance >= 1.0:
+        return 95
+    if hsk_balance >= 0.2:
+        return 70
+    if hsk_balance >= 0.05:
+        return 40
+    if hsk_balance >= 0.01:
+        return 20
+    return 5
+
+
 def _hold(state, scores, reason, data_source):
     return {
         "action": "hold",
@@ -127,12 +145,18 @@ def _withdraw_from_yield(state, scores, reason, data_source):
     }
 
 
-def _empty(reason, data_source):
+def _empty(reason, data_source, hsk_balance=0.0):
     return {
         "action": "hold",
         "amount_pct": 0,
         "amount_abs": 0,
         "reasoning": reason,
-        "scores": {"yield": 0, "liquidity": 0, "risk": 0, "payout_reserve": 0},
+        "scores": {
+            "yield": 0,
+            "liquidity": 0,
+            "risk": 0,
+            "payout_reserve": 0,
+            "gas_reserve": gas_reserve_score(hsk_balance),
+        },
         "data_source": data_source,
     }

@@ -19,6 +19,7 @@ class TreasuryState(BaseModel):
     yield_balance: float
     yield_apy: float  # e.g. 8.0
     pending_payouts: float  # upcoming obligations
+    treasury_hsk_balance: float = 1.0  # native HSK gas reserve on the treasury
 
 
 class Recommendation(BaseModel):

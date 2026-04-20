@@ -1,5 +1,8 @@
 import { ethers } from "hardhat";
 
+// APRO USDC/USD feed on HashKey testnet (Chainlink AggregatorV3 compatible, 8 decimals).
+const APRO_USDC_FEED = "0xCdB10dC9dB30B6ef2a63aB4460263655808fAE27";
+
 async function main() {
   const [deployer] = await ethers.getSigners();
   console.log("Deployer:", deployer.address);
@@ -33,10 +36,57 @@ async function main() {
   const treasuryAddr = await treasury.getAddress();
   console.log("TreasuryVault:", treasuryAddr);
 
+  // 4. Deploy MockKycSBT (demo stand-in; canonical HashKey KycSBT is not present on testnet)
+  console.log("\nDeploying MockKycSBT...");
+  const MockKycSBT = await ethers.getContractFactory("MockKycSBT");
+  const kycSBT = await MockKycSBT.deploy();
+  await kycSBT.waitForDeployment();
+  const kycSBTAddr = await kycSBT.getAddress();
+  console.log("MockKycSBT:", kycSBTAddr);
+
+  // 5. Post-deploy wiring — Phase 2 integrations. Abort on first revert, no partial-success summary.
+  try {
+    console.log("\nWiring Phase 2 integrations...");
+
+    let tx = await treasury.setKycSBT(kycSBTAddr);
+    await tx.wait();
+    console.log("TreasuryVault.setKycSBT -> MockKycSBT");
+
+    tx = await treasury.setAproUsdcFeed(APRO_USDC_FEED);
+    await tx.wait();
+    console.log("TreasuryVault.setAproUsdcFeed -> " + APRO_USDC_FEED);
+
+    // Seed deployer at ULTIMATE(4) + APPROVED(1) so owner-only flows survive the new KYC gates.
+    tx = await kycSBT.setKycInfo(deployer.address, "deployer.sentinel", 4, 1);
+    await tx.wait();
+    console.log("MockKycSBT.setKycInfo(deployer) -> ULTIMATE / APPROVED");
+
+    const basic = process.env.DEMO_BASIC_ADDRESS;
+    if (basic && ethers.isAddress(basic)) {
+      tx = await kycSBT.setKycInfo(basic, "", 1, 1);
+      await tx.wait();
+      console.log(`MockKycSBT.setKycInfo(${basic}) -> BASIC / APPROVED`);
+    }
+
+    const advanced = process.env.DEMO_ADVANCED_ADDRESS;
+    if (advanced && ethers.isAddress(advanced)) {
+      tx = await kycSBT.setKycInfo(advanced, "", 2, 1);
+      await tx.wait();
+      console.log(`MockKycSBT.setKycInfo(${advanced}) -> ADVANCED / APPROVED`);
+    }
+  } catch (err) {
+    console.error("\nPost-deploy wiring FAILED. Treasury is NOT fully configured.");
+    console.error(err);
+    process.exitCode = 1;
+    return;
+  }
+
   console.log("\n--- Deployment complete ---");
   console.log("USDC_ADDRESS=" + usdcAddr);
   console.log("TREASURY_ADDRESS=" + treasuryAddr);
   console.log("YIELD_VAULT_ADDRESS=" + yieldVaultAddr);
+  console.log("KYC_SBT_ADDRESS=" + kycSBTAddr);
+  console.log("NEXT_PUBLIC_KYC_SBT_ADDRESS=" + kycSBTAddr);
 }
 
 main().catch((error) => {

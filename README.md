@@ -125,6 +125,9 @@ SentinelTreasury/
 
 ## Demo
 
+- **Live app:** https://sentineltreasury.com
+- **Demo video:**
+
 [![Demo Video](https://img.youtube.com/vi/c5eBq2aXRPA/maxresdefault.jpg)](https://youtu.be/c5eBq2aXRPA)
 
 ## Current Status
