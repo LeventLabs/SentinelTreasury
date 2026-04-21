@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { formatEther, formatUnits } from "viem";
 import { useAccount, useBalance, useReadContract } from "wagmi";
+import { keepPreviousData } from "@tanstack/react-query";
 import { DepositForm } from "./DepositForm";
 import { RecommendationCard } from "./RecommendationCard";
 import { ApprovalFlow } from "./ApprovalFlow";
@@ -33,6 +34,7 @@ export function Dashboard() {
     query: {
       enabled: CONTRACTS_CONFIGURED,
       refetchInterval: 10000,
+      placeholderData: keepPreviousData,
     },
   });
 
@@ -44,6 +46,7 @@ export function Dashboard() {
     query: {
       enabled: CONTRACTS_CONFIGURED,
       refetchInterval: 10000,
+      placeholderData: keepPreviousData,
     },
   });
 
@@ -51,7 +54,10 @@ export function Dashboard() {
     address: YIELD_VAULT_ADDRESS,
     abi: YIELD_VAULT_ABI,
     functionName: "getAPY",
-    query: { enabled: CONTRACTS_CONFIGURED },
+    query: {
+      enabled: CONTRACTS_CONFIGURED,
+      placeholderData: keepPreviousData,
+    },
   });
 
   const treasuryHskQuery = useBalance({
@@ -59,6 +65,7 @@ export function Dashboard() {
     query: {
       enabled: CONTRACTS_CONFIGURED,
       refetchInterval: 10000,
+      placeholderData: keepPreviousData,
     },
   });
 
@@ -67,15 +74,18 @@ export function Dashboard() {
   const yieldApy = apyQuery.data ? Number(apyQuery.data) / 100 : 8.0;
   const treasuryHsk = treasuryHskQuery.data ? parseFloat(formatEther(treasuryHskQuery.data.value)) : 0;
 
-  // Staleness invalidation: clear recommendation when balances change
+  // Staleness invalidation: clear recommendation when balances change.
+  // Guarded against transient undefined from useReadContract during account
+  // switch — only compare once both queries have settled data.
   const prevBalances = useRef({ treasury: treasuryBalance, yield: yieldBalance });
   useEffect(() => {
+    if (treasuryQuery.data === undefined || yieldQuery.data === undefined) return;
     const prev = prevBalances.current;
     if (prev.treasury !== treasuryBalance || prev.yield !== yieldBalance) {
       setRecommendation(null);
     }
     prevBalances.current = { treasury: treasuryBalance, yield: yieldBalance };
-  }, [treasuryBalance, yieldBalance]);
+  }, [treasuryBalance, yieldBalance, treasuryQuery.data, yieldQuery.data]);
 
   const refreshBalances = () => {
     treasuryQuery.refetch();
@@ -89,7 +99,7 @@ export function Dashboard() {
       {/* KYC row */}
       <div className="flex items-center justify-between bg-gray-900 rounded-xl px-4 py-3 border border-gray-800">
         <div className="flex items-center gap-3">
-          <span className="text-xs text-gray-500">Your KYC status:</span>
+          <span className="text-sm text-gray-300 font-medium">Your KYC status:</span>
           <KycBadge address={address} />
         </div>
         <RequestKycButton address={address} onSuccess={refreshBalances} />
@@ -98,22 +108,23 @@ export function Dashboard() {
       {/* Portfolio Overview */}
       <div className="grid grid-cols-3 gap-4">
         <div className="bg-gray-900 rounded-xl p-5 border border-gray-800">
-          <p className="text-gray-400 text-sm">Treasury Reserve</p>
+          <p className="text-gray-300 text-sm font-medium">Treasury Reserve</p>
           <p className="text-2xl font-bold mt-1">${treasuryBalance.toLocaleString()}</p>
         </div>
         <div className="bg-gray-900 rounded-xl p-5 border border-gray-800">
-          <p className="text-gray-400 text-sm">Yield Vault</p>
+          <p className="text-gray-300 text-sm font-medium">Yield Vault</p>
           <p className="text-2xl font-bold mt-1">${yieldBalance.toLocaleString()}</p>
         </div>
         <div className="bg-gray-900 rounded-xl p-5 border border-gray-800">
-          <p className="text-gray-400 text-sm">Total</p>
+          <p className="text-gray-300 text-sm font-medium">Total</p>
           <p className="text-2xl font-bold mt-1">${(treasuryBalance + yieldBalance).toLocaleString()}</p>
         </div>
       </div>
 
-      <p className="text-xs text-gray-500 -mt-3 pl-1">
-        Treasury HSK: {treasuryHsk.toFixed(3)} HSK
-        <span className="ml-2 text-gray-600">(gas reserve for on-chain operations)</span>
+      <p className="text-sm text-gray-300 -mt-3 pl-1">
+        <span className="font-medium">Treasury HSK:</span>{" "}
+        <span className="font-mono font-semibold text-white">{treasuryHsk.toFixed(3)} HSK</span>
+        <span className="ml-2 text-gray-400">(gas reserve for on-chain operations)</span>
       </p>
 
       {/* Deposit */}
@@ -138,8 +149,8 @@ export function Dashboard() {
 
       {/* Phase 2 Roadmap — ZKID visibility without shipping ZK code (R21). */}
       <div className="bg-gray-900/50 rounded-xl p-4 border border-gray-800/80 text-sm">
-        <p className="font-semibold text-gray-300 mb-2">Phase 2 Roadmap</p>
-        <ul className="space-y-1 text-gray-400">
+        <p className="font-semibold text-gray-200 mb-2">Phase 2 Roadmap</p>
+        <ul className="space-y-1 text-gray-300">
           <li>
             • ZK tier-proof verification via{" "}
             <a
@@ -150,7 +161,7 @@ export function Dashboard() {
             >
               KycTierProofVerifier
             </a>{" "}
-            <span className="text-gray-600 font-mono text-xs">
+            <span className="text-gray-400 font-mono text-xs">
               ({KYC_TIER_PROOF_VERIFIER.slice(0, 6)}…{KYC_TIER_PROOF_VERIFIER.slice(-4)})
             </span>
           </li>
@@ -158,7 +169,7 @@ export function Dashboard() {
           <li>• Migration to canonical HashKey KYC SBT when deployed</li>
         </ul>
         {!KYC_SBT_CONFIGURED && (
-          <p className="mt-3 text-xs text-gray-500">
+          <p className="mt-3 text-xs text-gray-400">
             Note: KYC gating is currently disabled (no KYC SBT address configured).
           </p>
         )}

@@ -70,11 +70,11 @@ export function RequestKycButton({ address, onSuccess }: Props) {
       <button
         onClick={handleRequest}
         disabled={pending || feeQuery.data === undefined}
-        className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 px-3 py-1 rounded-lg text-xs font-medium"
+        className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 px-4 py-1.5 rounded-lg text-sm font-medium"
       >
         {pending ? "Requesting KYC..." : "Request KYC"}
       </button>
-      {error && <span className="text-xs text-red-400">{error}</span>}
+      {error && <span className="text-sm text-red-400">{error}</span>}
     </div>
   );
 }

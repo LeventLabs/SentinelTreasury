@@ -70,7 +70,7 @@ export function RecommendationCard({ treasuryBalance, yieldBalance, yieldApy, tr
 
       {/* Pending Payouts Input */}
       <div className="mb-3">
-        <label className="text-xs text-gray-500">Pending Payouts (USDC)</label>
+        <label className="text-sm text-gray-300 font-medium">Pending Payouts (USDC)</label>
         <input
           type="number"
           value={pendingPayouts}
@@ -106,8 +106,8 @@ export function RecommendationCard({ treasuryBalance, yieldBalance, yieldApy, tr
             <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
               {Object.entries(rec.scores).map(([key, val]) => (
                 <div key={key} className="text-center">
-                  <div className="text-xs text-gray-300 capitalize">{key.replace(/_/g, " ")}</div>
-                  <div className={`text-lg font-bold ${
+                  <div className="text-sm text-gray-200 font-medium capitalize">{key.replace(/_/g, " ")}</div>
+                  <div className={`text-xl font-bold ${
                     (val as number) >= 70 ? "text-green-400" : (val as number) >= 40 ? "text-yellow-400" : "text-red-400"
                   }`}>
                     {val as number}
