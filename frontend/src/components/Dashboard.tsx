@@ -152,21 +152,22 @@ export function Dashboard() {
         <p className="font-semibold text-gray-200 mb-2">Phase 2 Roadmap</p>
         <ul className="space-y-1 text-gray-300">
           <li>
-            • ZK tier-proof verification via{" "}
+            • <span className="font-semibold text-gray-100">Privacy-preserving tier checks</span> — prove operator ≥ ADVANCED without revealing identity (verifier{" "}
             <a
               href={`${EXPLORER_URL}/address/${KYC_TIER_PROOF_VERIFIER}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-blue-400 hover:underline"
+              className="text-blue-400 hover:underline font-mono text-xs"
             >
-              KycTierProofVerifier
-            </a>{" "}
-            <span className="text-gray-400 font-mono text-xs">
-              ({KYC_TIER_PROOF_VERIFIER.slice(0, 6)}…{KYC_TIER_PROOF_VERIFIER.slice(-4)})
-            </span>
+              {KYC_TIER_PROOF_VERIFIER.slice(0, 6)}…{KYC_TIER_PROOF_VERIFIER.slice(-4)}
+            </a>)
           </li>
-          <li>• zkFabric Registry ingestion via KYCSBTAdapter</li>
-          <li>• Migration to canonical HashKey KYC SBT when deployed</li>
+          <li>
+            • <span className="font-semibold text-gray-100">zkFabric identity reuse</span> — honor KYC attestations from HashKey&apos;s zkFabric Registry, so users don&apos;t re-KYC per app
+          </li>
+          <li>
+            • <span className="font-semibold text-gray-100">Canonical HashKey KYC SBT</span> — drop-in upgrade to the official HashKey identity contract when it ships
+          </li>
         </ul>
         {!KYC_SBT_CONFIGURED && (
           <p className="mt-3 text-xs text-gray-400">
