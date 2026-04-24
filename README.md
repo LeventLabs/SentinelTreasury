@@ -4,6 +4,12 @@
 
 AI treasury copilot that decides how much capital to keep liquid, how much to deploy for yield, and how much to reserve for payments — with explainable and policy-gated execution on HashKey Chain.
 
+## Award
+
+Sentinel Treasury placed **3rd in the AI Track** at the **HashKey Chain Horizon Hackathon**.
+
+Official announcement: https://x.com/HSKChain/status/2047529535550460253
+
 ## Overview
 
 Sentinel Treasury is a hackathon-stage treasury management system for teams that hold on-chain capital and still make allocation decisions manually. It combines:
@@ -149,6 +155,7 @@ SentinelTreasury/
 
 Phase 2 is live on HashKey Chain Testnet. `TreasuryVault` now enforces KYC-SBT tier gates, the APRO USDC/USD peg gate, and the AI recommendation engine scores treasury gas reserves.
 
+- Awarded **3rd place in the AI Track** at the HashKey Chain Horizon Hackathon
 - 4 contracts deployed and verified on Blockscout (TreasuryVault, MockYieldVault, MockERC20, MockKycSBT)
 - 157 automated tests (109 contract + 48 AI service)
 - End-to-end flow verified: request KYC → deposit → recommend (5 scores) → approve (peg gate) → execute
